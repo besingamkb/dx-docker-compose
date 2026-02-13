@@ -11,15 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-version: "3.8"
-
 services:
   core:
     container_name: dx-core
     image: ${DX_DOCKER_IMAGE_CORE:?'Missing docker image environment parameter'}
     volumes:
-      - ./volumes/core/wp_profile:/opt/HCL/wp_profile
+      - ./volumes/core/wp_profile/logs:/opt/HCL/wp_profile/logs
+      - ./volumes/core/cw_profile/logs:/opt/HCL/AppServer/profiles/cw_profile/logs
     ports:
       - "7777:7777"
       - "10020:10020"
@@ -100,6 +98,7 @@ services:
     hostname: dx-dam-db-node-0
     image: ${DX_DOCKER_IMAGE_DAM_DB_NODE:?'Missing docker image environment parameter'}
     environment:
+      - PGPOOL_BACKEND_NODES=0:dx-dam-db-node-0:5432
       - POSTGRES_DB=dxmediadb
       - POSTGRES_USER=dxuser
       - POSTGRES_PASSWORD=d1gitalExperience
@@ -113,16 +112,16 @@ services:
       - REPMGR_PARTNER_NODES=dx-dam-db-node-0;
       - SYNCHRONOUS_COMMIT=off
       # The synchronous standby names value should be updated to "1 (*)" if the number of DB nodes is 2
-      - SYNCHRONOUS_STANDBY_NAMES=
+      - SYNCHRONOUS_STANDBY_NAMES=*
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
       timeout: 30s
-      retries: 3
+      retries: 20
     ports:
       - "5433:5432"
-    volumes:
-      - ./volumes/dam/db:/var/lib/pgsql/11/data
+#    volumes:
+#      - ./volumes/dam/db:/var/lib/pgsql/11/data
     networks:
       - default
   dam-db-pool:
@@ -143,6 +142,7 @@ services:
       - PGPOOL_ENABLE_LOAD_BALANCING=yes
       - PGPOOL_POSTGRES_CUSTOM_USERS=damuser
       - PGPOOL_POSTGRES_CUSTOM_PASSWORDS=1234
+      - NEW_DB_MANAGEMENT=false
     networks:
       - default
     depends_on:
@@ -152,7 +152,7 @@ services:
       test: ["CMD-SHELL", "sh scripts/healthcheck.sh"]
       interval: 30s
       timeout: 15s
-      retries: 5
+      retries: 20
   haproxy:
     image: ${DX_DOCKER_IMAGE_HAPROXY:?'Missing docker image environment parameter'}
     container_name: dx-haproxy
