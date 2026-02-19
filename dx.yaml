@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+version: "3.8"
+
 services:
   core:
     container_name: dx-core
     image: ${DX_DOCKER_IMAGE_CORE:?'Missing docker image environment parameter'}
     volumes:
-      - ./volumes/core/wp_profile/logs:/opt/HCL/wp_profile/logs
-      - ./volumes/core/cw_profile/logs:/opt/HCL/AppServer/profiles/cw_profile/logs
+      - ./volumes/core/wp_profile:/opt/HCL/wp_profile
     ports:
       - "7777:7777"
       - "10020:10020"
@@ -27,6 +29,22 @@ services:
       - "10202:10202"
       - "10033:10033"
       - "10203:10203"
+    networks:
+      - default
+  core2:
+    container_name: dx-core-2
+    image: ${DX_DOCKER_IMAGE_CORE:?'Missing docker image environment parameter'}
+    volumes:
+      - ./volumes/core2/wp_profile:/opt/HCL/wp_profile
+    ports:
+      - "7778:7777"
+      - "10120:10020"
+      - "10139:10039"
+      - "10141:10041"
+      - "10300:10200"
+      - "10302:10202"
+      - "10133:10033"
+      - "10303:10203"
     networks:
       - default
   ringapi:
@@ -84,7 +102,7 @@ services:
     container_name: dx-cc
     image: ${DX_DOCKER_IMAGE_CC:?'Missing docker image environment parameter'}
     ports:
-      - "5000:3000"
+      - "5001:3000"
     environment:
       - DEBUG=INFO:server-v1:*,ERROR:server-v1:*
       - PORTAL_PORT=10039
@@ -97,7 +115,7 @@ services:
     container_name: dx-dam-db-node-0
     hostname: dx-dam-db-node-0
     image: ${DX_DOCKER_IMAGE_DAM_DB_NODE:?'Missing docker image environment parameter'}
-    environment:      
+    environment:
       - POSTGRES_DB=dxmediadb
       - POSTGRES_USER=dxuser
       - POSTGRES_PASSWORD=d1gitalExperience
@@ -111,16 +129,14 @@ services:
       - REPMGR_PARTNER_NODES=dx-dam-db-node-0;
       - SYNCHRONOUS_COMMIT=off
       # The synchronous standby names value should be updated to "1 (*)" if the number of DB nodes is 2
-      - SYNCHRONOUS_STANDBY_NAMES=*
+      - SYNCHRONOUS_STANDBY_NAMES=
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 60s
-      timeout: 360s
+      interval: 30s
+      timeout: 30s
       retries: 3
     ports:
       - "5433:5432"
-    # It is noticed on Microsoft Windows that the persistence of the postgress DB data may cause performance issues during the first container startup. 
-    # To get a better performance it might be needed to remove that volume and to keep then the DAM-DB data just running inside of the container.     
     volumes:
       - ./volumes/dam/db:/var/lib/pgsql/11/data
     networks:
@@ -179,5 +195,33 @@ services:
       - ./volumes/dam/db:/mnt/prereqs-checks-volumes/data
     ports:
       - 81:8082
+    networks:
+      - default
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.17
+    container_name: dx-etcd
+    environment:
+      - ETCD_UNSUPPORTED_ARCH=arm64
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_ADVERTISE_CLIENT_URLS=http://dx-etcd:2379
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  apisix:
+    image: apache/apisix:3.8.0-debian
+    container_name: dx-apisix
+    depends_on:
+      etcd:
+        condition: service_healthy
+    volumes:
+      - ./apisix_conf/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+    ports:
+      - "90:9080"
+      - "9180:9180"
     networks:
       - default

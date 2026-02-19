@@ -1,1 +1,3 @@
 volumes
+ssl/tls.*
+ssl/localhost.pem
