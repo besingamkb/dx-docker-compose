@@ -28,7 +28,6 @@ deployment:
     timeout: 30
 
 # [NEW - MONITORING] Enable Prometheus metrics endpoint
-# Equivalent to HAProxy stats dashboard on port 8404
 # Access at http://localhost:9091/apisix/prometheus/metrics
 plugin_attr:
   prometheus:
@@ -37,8 +36,11 @@ plugin_attr:
       ip: 0.0.0.0
       port: 9091
 
-# [NEW - LOGGING] Custom access log format with client IP removed (privacy)
-# Equivalent to HAProxy's custom log-format without source IPs
+# [NEW - LOGGING + SESSION TRACKING]
 nginx_config:
   http:
     access_log_format: '"$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $upstream_addr $upstream_status $upstream_response_time'
+  # [NEW] Inject custom shared dict for session tracking directly into nginx.conf
+  # Equivalent of HAProxy's stick-table (10MB in-memory)
+  http_configuration_snippet: |
+    lua_shared_dict plugin-session-tracker 10m;

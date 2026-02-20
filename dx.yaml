@@ -178,6 +178,7 @@ services:
     ports:
       - 80:8081
       - 8404:8404
+      - 9999:9999
     networks:
       - default
   prereqs-checker:

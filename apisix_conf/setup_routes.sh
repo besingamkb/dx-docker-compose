@@ -207,13 +207,6 @@ curl -s -X PUT "$ADMIN/routes/5" -H "$KEY" -H "Content-Type: application/json" -
     "serverless-post-function": {
       "phase": "header_filter",
       "functions": ["return function(conf, ctx) local loc = ngx.header[\"Location\"]; if loc then ngx.header[\"Location\"] = loc:gsub(\"localhost:10039\", \"localhost:90\") end end"]
-    },
-    "limit-count": {
-      "count": 999999,
-      "time_window": 1800,
-      "key": "remote_addr",
-      "rejected_code": 429,
-      "show_limit_quota_header": true
     }
   }
 }'
@@ -236,13 +229,6 @@ curl -s -X PUT "$ADMIN/routes/6" -H "$KEY" -H "Content-Type: application/json" -
     "serverless-post-function": {
       "phase": "header_filter",
       "functions": ["return function(conf, ctx) local loc = ngx.header[\"Location\"]; if loc then ngx.header[\"Location\"] = loc:gsub(\"localhost:10039\", \"localhost:90\") end end"]
-    },
-    "limit-count": {
-      "count": 999999,
-      "time_window": 1800,
-      "key": "remote_addr",
-      "rejected_code": 429,
-      "show_limit_quota_header": true
     }
   }
 }'
@@ -265,13 +251,41 @@ curl -s -X PUT "$ADMIN/routes/7" -H "$KEY" -H "Content-Type: application/json" -
     "serverless-post-function": {
       "phase": "header_filter",
       "functions": ["return function(conf, ctx) local loc = ngx.header[\"Location\"]; if loc then ngx.header[\"Location\"] = loc:gsub(\"localhost:10039\", \"localhost:90\") end; local upstream_addr = ngx.var.upstream_addr or \"\"; local server_id = \"core1\"; if upstream_addr:find(\"dx%-core%-2\") or upstream_addr:find(\"%.7:\") or upstream_addr:find(\"%.11:\") then server_id = \"core2\" end; ngx.header[\"Set-Cookie\"] = \"DXSRVID=\" .. server_id .. \"; Path=/; HttpOnly\" end"]
-    },
-    "limit-count": {
-      "count": 999999,
-      "time_window": 1800,
-      "key": "remote_addr",
-      "rejected_code": 429,
-      "show_limit_quota_header": true
+    }
+  }
+}'
+echo ""
+
+# ============================================================
+# Global Rule: Session Tracking (applies to ALL routes)
+# Equivalent to HAProxy's stick-table tracking
+# Composite fingerprint: IP + User-Agent + X-Forwarded-For
+# ============================================================
+echo "Creating global rule: Session tracking..."
+curl -s -X PUT "$ADMIN/global_rules/1" -H "$KEY" -H "Content-Type: application/json" -d '{
+  "plugins": {
+    "serverless-pre-function": {
+      "phase": "access",
+      "functions": ["return function(conf, ctx) local dict = ngx.shared[\"plugin-session-tracker\"]; if not dict then return end; local ip = ngx.var.remote_addr or \"unknown\"; local ua = ngx.var.http_user_agent or \"none\"; local xff = ngx.var.http_x_forwarded_for or \"none\"; local fp = \"--\" .. ip .. \"_\" .. ua .. \"_\" .. xff .. \"--\"; local now = ngx.time(); dict:incr(fp .. \"::count\", 1, 0, 1800); if not dict:get(fp .. \"::first_seen\") then dict:set(fp .. \"::first_seen\", now, 1800) end; dict:set(fp .. \"::last_seen\", now, 1800); dict:set(\"key::\" .. fp, now, 1800) end"]
+    }
+  }
+}'
+echo ""
+
+# ============================================================
+# Route 8: Session Tracker Dump (admin query endpoint)
+# Equivalent to HAProxy's "show table dx" via socket
+# ============================================================
+echo "Creating route: Session tracker dump..."
+curl -s -X PUT "$ADMIN/routes/8" -H "$KEY" -H "Content-Type: application/json" -d '{
+  "name": "session-tracker-dump",
+  "uri": "/session-tracker/dump",
+  "upstream_id": 1,
+  "priority": 20,
+  "plugins": {
+    "serverless-pre-function": {
+      "phase": "access",
+      "functions": ["return function(conf, ctx) local cjson = require(\"cjson\"); local dict = ngx.shared[\"plugin-session-tracker\"]; if not dict then ngx.header[\"Content-Type\"] = \"application/json\"; ngx.say(cjson.encode({error = \"shared dict not found\"})); ngx.exit(500); return end; local keys = dict:get_keys(0); local sessions = {}; for _, key in ipairs(keys) do if key:sub(1, 5) == \"key::\" then local fp = key:sub(6); sessions[#sessions + 1] = {fingerprint = fp, request_count = dict:get(fp .. \"::count\") or 0, first_seen = dict:get(fp .. \"::first_seen\") or 0, last_seen = dict:get(fp .. \"::last_seen\") or 0} end end; ngx.header[\"Content-Type\"] = \"application/json\"; ngx.say(cjson.encode({total = #sessions, sessions = sessions})); ngx.exit(200) end"]
     }
   }
 }'
@@ -286,3 +300,7 @@ curl -s "$ADMIN/routes" -H "$KEY" | grep -o '"name":"[^"]*"' | sort
 echo ""
 echo "Upstreams configured:"
 curl -s "$ADMIN/upstreams" -H "$KEY" | grep -o '"name":"[^"]*"' | sort
+echo ""
+echo "Global rules configured:"
+curl -s "$ADMIN/global_rules" -H "$KEY" | grep -o '"id":"[^"]*"' | sort
+
