@@ -308,6 +308,8 @@
                 <table>
                     <tr><th>Metric</th><th>Value</th></tr>
                     <tr><td>New Cookies Issued</td><td class="mono">${data.new_cookies_issued}</td></tr>
+                    <tr><td>Requests routed to target (core1)</td><td class="mono">${data.core1_hits} / 5</td></tr>
+                    <tr><td>Requests leaked to (core2)</td><td class="mono">${data.core2_hits}</td></tr>
                 </table>
             `;
         }
