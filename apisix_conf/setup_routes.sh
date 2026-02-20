@@ -266,7 +266,7 @@ curl -s -X PUT "$ADMIN/global_rules/1" -H "$KEY" -H "Content-Type: application/j
   "plugins": {
     "serverless-pre-function": {
       "phase": "access",
-      "functions": ["return function(conf, ctx) local dict = ngx.shared[\"plugin-session-tracker\"]; if not dict then return end; local ip = ngx.var.remote_addr or \"unknown\"; local ua = ngx.var.http_user_agent or \"none\"; local xff = ngx.var.http_x_forwarded_for or \"none\"; local fp = \"--\" .. ip .. \"_\" .. ua .. \"_\" .. xff .. \"--\"; local now = ngx.time(); dict:incr(fp .. \"::count\", 1, 0, 1800); if not dict:get(fp .. \"::first_seen\") then dict:set(fp .. \"::first_seen\", now, 1800) end; dict:set(fp .. \"::last_seen\", now, 1800); dict:set(\"key::\" .. fp, now, 1800) end"]
+      "functions": ["return function(conf, ctx) local dict = ngx.shared[\"plugin-session-tracker\"]; if not dict then return end; local ua = ngx.var.http_user_agent or \"none\"; if ua:find(\"DX%-Dashboard\") then return end; local ip = ngx.var.remote_addr or \"unknown\"; local xff = ngx.var.http_x_forwarded_for or \"none\"; local fp = \"--\" .. ip .. \"_\" .. ua .. \"_\" .. xff .. \"--\"; local now = ngx.time(); dict:incr(fp .. \"::count\", 1, 0, 1800); if not dict:get(fp .. \"::first_seen\") then dict:set(fp .. \"::first_seen\", now, 1800) end; dict:set(fp .. \"::last_seen\", now, 1800); dict:set(\"key::\" .. fp, now, 1800) end"]
     }
   }
 }'

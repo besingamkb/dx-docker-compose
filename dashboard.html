@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DX Docker Compose — Ingress Test Results</title>
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --panel-bg: #1a1d27;
+            --border-color: #2a2e3d;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-ha: #10b981;
+            --accent-api: #6366f1;
+            --ha-bg: rgba(16, 185, 129, 0.05);
+            --api-bg: rgba(99, 102, 241, 0.05);
+            --error-color: #f43f5e;
+            --success-color: #10b981;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .btn-refresh {
+            background: #2a2e3d;
+            color: white;
+            border: 1px solid #3f4458;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn-refresh:hover {
+            background: #3f4458;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .section-number {
+            background: #2a2e3d;
+            color: var(--text-main);
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .panel.ha {
+            border-top: 3px solid var(--accent-ha);
+            background: linear-gradient(180deg, var(--ha-bg) 0%, transparent 100%), var(--panel-bg);
+        }
+
+        .panel.api {
+            border-top: 3px solid var(--accent-api);
+            background: linear-gradient(180deg, var(--api-bg) 0%, transparent 100%), var(--panel-bg);
+        }
+
+        .panel-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel.ha .panel-title {
+            color: var(--accent-ha);
+        }
+
+        .panel.api .panel-title {
+            color: var(--accent-api);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            color: #fbbf24;
+            font-size: 12px;
+        }
+
+        .config-block {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .key {
+            color: var(--text-muted);
+        }
+
+        .val {
+            color: var(--text-main);
+            font-family: monospace;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.up,
+        .badge.pass {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .badge.down,
+        .badge.fail {
+            background: rgba(244, 63, 94, 0.15);
+            color: #f43f5e;
+        }
+
+        .error-state {
+            color: var(--error-color);
+            font-size: 13px;
+            padding: 12px;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            border-radius: 6px;
+            background: rgba(244, 63, 94, 0.05);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div>
+            <h1>DX Docker Compose — Static A/B Test Results</h1>
+            <div class="subtitle">Showing output from A_B_testing scripts parsed via JSON</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div id="last-updated" style="font-size: 12px; color: var(--text-muted);"></div>
+            <button class="btn-refresh" onclick="fetchAll()">↻ Refresh</button>
+        </div>
+    </div>
+
+    <div id="app"></div>
+
+    <script>
+        function createSection(number, title, contentHA, contentAPI) {
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-number" style="background: ${number === 1 ? 'var(--accent-ha)' : number === 2 ? 'var(--accent-api)' : '#2a2e3d'}; color: ${number <= 2 ? '#fff' : 'inherit'}">${number}</div>
+                        <div class="section-title">${title}</div>
+                    </div>
+                    <div class="grid">
+                        <div class="panel ha">
+                            <div class="panel-title">● HAProxy</div>
+                            ${contentHA}
+                        </div>
+                        <div class="panel api">
+                            <div class="panel-title">● APISIX</div>
+                            ${contentAPI}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLB(data) {
+            if (data.error) return `<div class="error-state">${data.error}</div>`;
+            return `
+                <div class="config-block">
+                    <span class="key">Result:</span> <span class="badge ${data.pass ? 'pass' : 'fail'}">${data.pass ? 'PASS' : 'FAIL'}</span>
+                </div>
+                <table>
+                    <tr><th>Container</th><th>Requests Handled</th></tr>
+                    <tr><td class="mono">dx-core</td><td>${data.core1_count}</td></tr>
+                    <tr><td class="mono">dx-core-2</td><td>${data.core2_count}</td></tr>
+                </table>
+            `;
+        }
+
+        function renderPath(data) {
+            if (data.error) return `<div class="error-state">${data.error}</div>`;
+            return `
+                <table>
+                    <tr><th>Path</th><th>HTTP Status</th></tr>
+                    ${Object.entries(data).map(([path, status]) => `
+                        <tr><td class="mono">${path}</td><td>${status}</td></tr>
+                    `).join('')}
+                </table>
+            `;
+        }
+
+        function renderCookie(data) {
+            if (data.error) return `<div class="error-state">${data.error}</div>`;
+            if (!data.has_cookie) return `<div class="error-state">No DXSRVID Cookie Found</div>`;
+
+            return `
+                <div class="config-block">
+                    <div style="margin-bottom:8px"><span class="key">Set-Cookie payload:</span><br><span class="val mono" style="font-size:11px;word-break:break-all">${data.cookie_value}</span></div>
+                    <div><span class="key">HttpOnly flag:</span> <span class="badge ${data.has_httponly ? 'pass' : 'fail'}">${data.has_httponly ? 'Yes' : 'No'}</span></div>
+                    <div style="margin-top:4px"><span class="key">Path=/ flag:</span> <span class="badge ${data.has_path ? 'pass' : 'fail'}">${data.has_path ? 'Yes' : 'No'}</span></div>
+                </div>
+            `;
+        }
+
+        function renderSticky(data) {
+            if (data.error) return `<div class="error-state">${data.error}</div>`;
+            return `
+                <div class="config-block">
+                    <span class="key">Result:</span> <span class="badge ${data.pass ? 'pass' : 'fail'}">${data.pass ? 'PASS' : 'FAIL'}</span>
+                </div>
+                <p style="font-size:13px; color:var(--text-muted)">When passing a valid cookie to the proxy, it should route correctly without issuing a new Set-Cookie header.</p>
+                <table>
+                    <tr><th>Metric</th><th>Value</th></tr>
+                    <tr><td>New Cookies Issued</td><td class="mono">${data.new_cookies_issued}</td></tr>
+                </table>
+            `;
+        }
+
+        function renderSession(data) {
+            if (data.error) return `<div class="error-state">${data.error}</div>`;
+            return `
+                <div class="config-block">
+                    <span class="key">Successfully Tracked:</span> <span class="badge ${data.tracked ? 'pass' : 'fail'}">${data.tracked ? 'Yes' : 'No'}</span>
+                </div>
+                <table>
+                    <tr><th>Metric</th><th>Value</th></tr>
+                    <tr><td>Requests Recorded</td><td class="mono">${data.request_count}</td></tr>
+                </table>
+            `;
+        }
+
+        async function fetchAll() {
+            const btn = document.querySelector('.btn-refresh');
+            if (btn) btn.textContent = 'Refreshing...';
+
+            try {
+                // Fetch directly from the A_B_testing/results directory
+                const [resLB, resPath, resCookie, resSticky, resSession] = await Promise.all([
+                    fetch('A_B_testing/results/1_loadbalancing_results.json'),
+                    fetch('A_B_testing/results/2_path_routing_results.json'),
+                    fetch('A_B_testing/results/3_cookie_management_results.json'),
+                    fetch('A_B_testing/results/4_sticky_sessions_results.json'),
+                    fetch('A_B_testing/results/5_session_tracking_results.json')
+                ]);
+
+                const dataLB = await resLB.json();
+                const dataPath = await resPath.json();
+                const dataCookie = await resCookie.json();
+                const dataSticky = await resSticky.json();
+                const dataSession = await resSession.json();
+
+                let html = '';
+
+                // 1. Load Balancer
+                html += createSection(1, 'Load Balancer Check',
+                    renderLB(dataLB.HAProxy || { error: 'No data' }),
+                    renderLB(dataLB.APISIX || { error: 'No data' })
+                );
+
+                // 2. Path Routing
+                html += createSection(2, 'Path Routing Codes',
+                    renderPath(dataPath.HAProxy || { error: 'No data' }),
+                    renderPath(dataPath.APISIX || { error: 'No data' })
+                );
+
+                // 3. Cookie Management
+                html += createSection(3, 'Cookie Management',
+                    renderCookie(dataCookie.HAProxy || { error: 'No data' }),
+                    renderCookie(dataCookie.APISIX || { error: 'No data' })
+                );
+
+                // 4. Sticky Sessions
+                html += createSection(4, 'Sticky Sessions',
+                    renderSticky(dataSticky.HAProxy || { error: 'No data' }),
+                    renderSticky(dataSticky.APISIX || { error: 'No data' })
+                );
+
+                // 5. User Session Tracking
+                html += createSection(5, 'User Session Tracking',
+                    renderSession(dataSession.HAProxy || { error: 'No data' }),
+                    renderSession(dataSession.APISIX || { error: 'No data' })
+                );
+
+                document.getElementById('app').innerHTML = html;
+
+                const now = new Date();
+                document.getElementById('last-updated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('app').innerHTML = `<div class="error-state">Failed to load JSON files. Are you viewing this via a Live Server extension? Browsers block file:// fetches. Ensure the A_B_testing folder contains the .json results.</div>`;
+            } finally {
+                if (btn) btn.textContent = '↻ Refresh';
+            }
+        }
+
+        // Initial fetch
+        fetchAll();
+    </script>
+</body>
+
+</html>
