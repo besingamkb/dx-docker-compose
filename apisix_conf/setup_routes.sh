@@ -25,7 +25,9 @@ curl -s -X PUT "$ADMIN/upstreams/1" -H "$KEY" -H "Content-Type: application/json
     "connect": 10,
     "send": 1200,
     "read": 1200
-  }
+  },
+  "retries": 1,
+  "retry_timeout": 10
 }'
 echo ""
 
@@ -205,6 +207,13 @@ curl -s -X PUT "$ADMIN/routes/5" -H "$KEY" -H "Content-Type: application/json" -
     "serverless-post-function": {
       "phase": "header_filter",
       "functions": ["return function(conf, ctx) local loc = ngx.header[\"Location\"]; if loc then ngx.header[\"Location\"] = loc:gsub(\"localhost:10039\", \"localhost:90\") end end"]
+    },
+    "limit-count": {
+      "count": 999999,
+      "time_window": 1800,
+      "key": "remote_addr",
+      "rejected_code": 429,
+      "show_limit_quota_header": true
     }
   }
 }'
@@ -227,6 +236,13 @@ curl -s -X PUT "$ADMIN/routes/6" -H "$KEY" -H "Content-Type: application/json" -
     "serverless-post-function": {
       "phase": "header_filter",
       "functions": ["return function(conf, ctx) local loc = ngx.header[\"Location\"]; if loc then ngx.header[\"Location\"] = loc:gsub(\"localhost:10039\", \"localhost:90\") end end"]
+    },
+    "limit-count": {
+      "count": 999999,
+      "time_window": 1800,
+      "key": "remote_addr",
+      "rejected_code": 429,
+      "show_limit_quota_header": true
     }
   }
 }'
@@ -248,7 +264,14 @@ curl -s -X PUT "$ADMIN/routes/7" -H "$KEY" -H "Content-Type: application/json" -
     },
     "serverless-post-function": {
       "phase": "header_filter",
-      "functions": ["return function(conf, ctx) local loc = ngx.header[\"Location\"]; if loc then ngx.header[\"Location\"] = loc:gsub(\"localhost:10039\", \"localhost:90\") end; local upstream_addr = ngx.var.upstream_addr or \"\"; local server_id = \"core1\"; if upstream_addr:find(\"dx%-core%-2\") or upstream_addr:find(\"%.7:\") or upstream_addr:find(\"%.11:\") then server_id = \"core2\" end; ngx.header[\"Set-Cookie\"] = \"DXSRVID=\" .. server_id .. \"; Path=/\" end"]
+      "functions": ["return function(conf, ctx) local loc = ngx.header[\"Location\"]; if loc then ngx.header[\"Location\"] = loc:gsub(\"localhost:10039\", \"localhost:90\") end; local upstream_addr = ngx.var.upstream_addr or \"\"; local server_id = \"core1\"; if upstream_addr:find(\"dx%-core%-2\") or upstream_addr:find(\"%.7:\") or upstream_addr:find(\"%.11:\") then server_id = \"core2\" end; ngx.header[\"Set-Cookie\"] = \"DXSRVID=\" .. server_id .. \"; Path=/; HttpOnly\" end"]
+    },
+    "limit-count": {
+      "count": 999999,
+      "time_window": 1800,
+      "key": "remote_addr",
+      "rejected_code": 429,
+      "show_limit_quota_header": true
     }
   }
 }'

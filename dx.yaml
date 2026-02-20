@@ -177,6 +177,7 @@ services:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
     ports:
       - 80:8081
+      - 8404:8404
     networks:
       - default
   prereqs-checker:
@@ -223,5 +224,6 @@ services:
     ports:
       - "90:9080"
       - "9180:9180"
+      - "9091:9091"
     networks:
       - default

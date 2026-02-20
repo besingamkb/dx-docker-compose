@@ -27,6 +27,18 @@ deployment:
     prefix: "/apisix"
     timeout: 30
 
+# [NEW - MONITORING] Enable Prometheus metrics endpoint
+# Equivalent to HAProxy stats dashboard on port 8404
+# Access at http://localhost:9091/apisix/prometheus/metrics
 plugin_attr:
   prometheus:
-    enable_export_server: false
+    enable_export_server: true
+    export_addr:
+      ip: 0.0.0.0
+      port: 9091
+
+# [NEW - LOGGING] Custom access log format with client IP removed (privacy)
+# Equivalent to HAProxy's custom log-format without source IPs
+nginx_config:
+  http:
+    access_log_format: '"$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $upstream_addr $upstream_status $upstream_response_time'
