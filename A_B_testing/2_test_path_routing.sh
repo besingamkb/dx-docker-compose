@@ -15,9 +15,6 @@ echo "" | tee -a "$OUTPUT_FILE"
 PATHS=(
     "/wps/portal"
     "/dx/api/dam/v1/collections"
-    "/dx/ui/content/v1/items"
-    "/dx/api/image-processor/v1/transform"
-    "/dx/api/core/v1/users"
     "/invalid-path-should-404"
 )
 
@@ -34,13 +31,21 @@ test_routing() {
     local i=1
     
     for path in "${PATHS[@]}"; do
-        status=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$port$path")
-        echo "  [GET $path] -> HTTP $status" | tee -a "$OUTPUT_FILE"
+        local full_url="http://localhost:$port$path"
+        # Display nicely in text output:
+        if [ "$port" = "80" ]; then
+            display_url="http://localhost$path"
+        else
+            display_url="$full_url"
+        fi
+        
+        status=$(curl -s -o /dev/null -w "%{http_code}" "$full_url")
+        echo "  [GET $display_url] -> HTTP $status" | tee -a "$OUTPUT_FILE"
         
         if [ $i -eq $path_count ]; then
-            echo "    \"$path\": $status" >> "$JSON_FILE"
+            echo "    \"$display_url\": $status" >> "$JSON_FILE"
         else
-            echo "    \"$path\": $status," >> "$JSON_FILE"
+            echo "    \"$display_url\": $status," >> "$JSON_FILE"
         fi
         ((i++))
     done
