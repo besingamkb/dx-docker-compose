@@ -33,14 +33,27 @@ echo "" | tee -a "$OUTPUT_FILE"
 
 if echo "$haproxy_dump" | grep -q "$CUSTOM_UA"; then
     ha_tracked="true"
-    ha_freq="5"
+    # HAProxy dump line format: ... key=--IP_UA_-- ... http_req_rate(...)
+    ha_freq=$(echo "$haproxy_dump" | grep "$CUSTOM_UA" | grep -o 'http_req_rate([0-9]*)=[^ ]*' | cut -d'=' -f2)
+    ha_fingerprint=$(echo "$haproxy_dump" | grep "$CUSTOM_UA" | grep -o 'key=[^ ]*' | cut -d'=' -f2)
+    
+    if [ -z "$ha_freq" ]; then ha_freq="0"; fi
+    
+    if [ "$ha_freq" -ge 5 ]; then
+        echo "  [PASS] HAProxy tracked at least 5 requests under fingerprint: $ha_fingerprint" | tee -a "$OUTPUT_FILE"
+    else
+        echo "  [FAIL] HAProxy tracked the user but recorded only $ha_freq requests." | tee -a "$OUTPUT_FILE"
+    fi
 else
     ha_tracked="false"
     ha_freq="0"
+    ha_fingerprint="None"
+    echo "  [FAIL] HAProxy did not track the user agent." | tee -a "$OUTPUT_FILE"
 fi
 
 echo "  \"HAProxy\": {" >> "$JSON_FILE"
 echo "    \"tracked\": $ha_tracked," >> "$JSON_FILE"
+echo "    \"fingerprint\": \"$ha_fingerprint\"," >> "$JSON_FILE"
 echo "    \"request_count\": $ha_freq" >> "$JSON_FILE"
 echo "  }," >> "$JSON_FILE"
 
@@ -53,14 +66,27 @@ echo "" | tee -a "$OUTPUT_FILE"
 
 if echo "$apisix_dump" | grep -q "$CUSTOM_UA"; then
     api_tracked="true"
-    api_freq="5"
+    # APISIX dump format is JSON: {"fingerprint":"...AB-Test-Runner...","request_count":5,...}
+    api_freq=$(echo "$apisix_dump" | grep -o '"fingerprint":"[^"]*AB-Test-Runner[^"]*","request_count":[0-9]*' | grep -o '"request_count":[0-9]*' | cut -d':' -f2)
+    api_fingerprint=$(echo "$apisix_dump" | grep -o '"fingerprint":"[^"]*AB-Test-Runner[^"]*"' | cut -d'"' -f4)
+    
+    if [ -z "$api_freq" ]; then api_freq="0"; fi
+
+    if [ "$api_freq" -ge 5 ]; then
+        echo "  [PASS] APISIX tracked at least 5 requests under fingerprint: $api_fingerprint" | tee -a "$OUTPUT_FILE"
+    else
+        echo "  [FAIL] APISIX tracked the user but recorded only $api_freq requests." | tee -a "$OUTPUT_FILE"
+    fi
 else
     api_tracked="false"
     api_freq="0"
+    api_fingerprint="None"
+    echo "  [FAIL] APISIX did not track the user agent." | tee -a "$OUTPUT_FILE"
 fi
 
 echo "  \"APISIX\": {" >> "$JSON_FILE"
 echo "    \"tracked\": $api_tracked," >> "$JSON_FILE"
+echo "    \"fingerprint\": \"$api_fingerprint\"," >> "$JSON_FILE"
 echo "    \"request_count\": $api_freq" >> "$JSON_FILE"
 echo "  }" >> "$JSON_FILE"
 

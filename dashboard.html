@@ -318,10 +318,11 @@
             if (data.error) return `<div class="error-state">${data.error}</div>`;
             return `
                 <div class="config-block">
-                    <span class="key">Successfully Tracked:</span> <span class="badge ${data.tracked ? 'pass' : 'fail'}">${data.tracked ? 'Yes' : 'No'}</span>
+                    <span class="key">Successfully Tracked (≥ 5 reqs):</span> <span class="badge ${data.tracked && data.request_count >= 5 ? 'pass' : 'fail'}">${data.tracked && data.request_count >= 5 ? 'Yes' : 'No'}</span>
                 </div>
                 <table>
                     <tr><th>Metric</th><th>Value</th></tr>
+                    <tr><td>Tracked Fingerprint</td><td class="mono" style="font-size: 11px; max-width: 250px; overflow-wrap: break-word;">${data.fingerprint || 'None'}</td></tr>
                     <tr><td>Requests Recorded</td><td class="mono">${data.request_count}</td></tr>
                 </table>
             `;
