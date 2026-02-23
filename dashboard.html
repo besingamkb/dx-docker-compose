@@ -238,12 +238,15 @@
     <div id="app"></div>
 
     <script>
-        function createSection(number, title, contentHA, contentAPI) {
+        function createSection(number, title, description, contentHA, contentAPI) {
             return `
                 <div class="section">
                     <div class="section-header">
                         <div class="section-number" style="background: ${number === 1 ? 'var(--accent-ha)' : number === 2 ? 'var(--accent-api)' : '#2a2e3d'}; color: ${number <= 2 ? '#fff' : 'inherit'}">${number}</div>
-                        <div class="section-title">${title}</div>
+                        <div>
+                            <div class="section-title">${title}</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${description}</div>
+                        </div>
                     </div>
                     <div class="grid">
                         <div class="panel ha">
@@ -264,11 +267,13 @@
             return `
                 <div class="config-block">
                     <span class="key">Result:</span> <span class="badge ${data.pass ? 'pass' : 'fail'}">${data.pass ? 'PASS' : 'FAIL'}</span>
+                    <span style="margin-left: 12px;" class="key">Execution Time:</span> <span class="val">${data.execution_time !== undefined ? data.execution_time + 's' : 'N/A'}</span>
                 </div>
                 <table>
                     <tr><th>Container</th><th>Requests Handled</th></tr>
                     <tr><td class="mono">dx-core</td><td>${data.core1_count}</td></tr>
                     <tr><td class="mono">dx-core-2</td><td>${data.core2_count}</td></tr>
+                    <tr><td style="color: ${data.error_count > 0 ? 'var(--error-color)' : 'var(--text-muted)'}">Errors / No Cookie</td><td style="color: ${data.error_count > 0 ? 'var(--error-color)' : 'inherit'}">${data.error_count !== undefined ? data.error_count : 'N/A'}</td></tr>
                 </table>
             `;
         }
@@ -352,30 +357,35 @@
 
                 // 1. Load Balancer
                 html += createSection(1, 'Load Balancer Check',
+                    'Verifies round-robin distribution by sending multiple requests and checking which backend handled each one.',
                     renderLB(dataLB.HAProxy || { error: 'No data' }),
                     renderLB(dataLB.APISIX || { error: 'No data' })
                 );
 
                 // 2. Path Routing
                 html += createSection(2, 'Path Routing Codes',
+                    'Confirms that known paths return expected HTTP status codes and both proxies route identically.',
                     renderPath(dataPath.HAProxy || { error: 'No data' }),
                     renderPath(dataPath.APISIX || { error: 'No data' })
                 );
 
                 // 3. Cookie Management
                 html += createSection(3, 'Cookie Management',
+                    'Checks that the DXSRVID session cookie is set correctly with HttpOnly and Path=/ flags.',
                     renderCookie(dataCookie.HAProxy || { error: 'No data' }),
                     renderCookie(dataCookie.APISIX || { error: 'No data' })
                 );
 
                 // 4. Sticky Sessions
                 html += createSection(4, 'Sticky Sessions',
+                    'Sends requests with an existing session cookie to verify the proxy maintains backend affinity without re-pinning.',
                     renderSticky(dataSticky.HAProxy || { error: 'No data' }),
                     renderSticky(dataSticky.APISIX || { error: 'No data' })
                 );
 
                 // 5. User Session Tracking
                 html += createSection(5, 'User Session Tracking',
+                    'Generates traffic with a custom User-Agent and queries each proxy\'s session store to confirm request tracking.',
                     renderSession(dataSession.HAProxy || { error: 'No data' }),
                     renderSession(dataSession.APISIX || { error: 'No data' })
                 );

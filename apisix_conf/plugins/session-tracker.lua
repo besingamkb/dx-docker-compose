@@ -34,8 +34,8 @@ local _M = {
 -- Equivalent to HAProxy's: --%[src]_%[req.fhdr(User-Agent)]_%[req.fhdr(X-Forwarded-For,-1)]--
 local function build_fingerprint(ctx)
     local ip = ctx.var.remote_addr or "unknown"
-    local ua = ctx.var.http_user_agent or "none"
-    local xff = ctx.var.http_x_forwarded_for or "none"
+    local ua = ctx.var.http_user_agent or ""
+    local xff = ctx.var.http_x_forwarded_for or ""
     return "--" .. ip .. "_" .. ua .. "_" .. xff .. "--"
 end
 

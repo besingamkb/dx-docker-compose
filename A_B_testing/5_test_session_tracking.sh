@@ -66,9 +66,18 @@ echo "" | tee -a "$OUTPUT_FILE"
 
 if echo "$apisix_dump" | grep -q "$CUSTOM_UA"; then
     api_tracked="true"
-    # APISIX dump format is JSON: {"fingerprint":"...AB-Test-Runner...","request_count":5,...}
-    api_freq=$(echo "$apisix_dump" | grep -o '"fingerprint":"[^"]*AB-Test-Runner[^"]*","request_count":[0-9]*' | grep -o '"request_count":[0-9]*' | cut -d':' -f2)
-    api_fingerprint=$(echo "$apisix_dump" | grep -o '"fingerprint":"[^"]*AB-Test-Runner[^"]*"' | cut -d'"' -f4)
+    # APISIX dump format is JSON array of session objects (field order may vary)
+    # Extract the session object containing our custom UA, then parse fields independently
+    api_session=$(echo "$apisix_dump" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for s in data.get('sessions', []):
+    if '$CUSTOM_UA' in s.get('fingerprint', ''):
+        print(json.dumps(s))
+        break
+" 2>/dev/null)
+    api_freq=$(echo "$api_session" | python3 -c "import sys,json; print(json.load(sys.stdin).get('request_count',0))" 2>/dev/null)
+    api_fingerprint=$(echo "$api_session" | python3 -c "import sys,json; print(json.load(sys.stdin).get('fingerprint','None'))" 2>/dev/null)
     
     if [ -z "$api_freq" ]; then api_freq="0"; fi
 
